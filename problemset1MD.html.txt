@@ -1,59 +1,74 @@
-`python
+problem set 2
+
+
+
+
 import numpy as np
 import matplotlib.pyplot as plt
-import torch
-from torchvision import datasets
-from skimage.util import montage
-import wandb as wb
-from skimage.io import imread
+import requests
+from PIL import Image
+import cv2
 
-def GPU(data):
-    return torch.tensor(data, requires_grad=True, dtype=torch.float, device=torch.device('cuda'))
+## Load image
 
-def GPU_data(data):
-    return torch.tensor(data, requires_grad=False, dtype=torch.float, device=torch.device('cuda'))
+URL = 'https://3.bp.blogspot.com/-DG4rqFtAJ4c/T-8mUvVo6yI/AAAAAAAADKc/eSxKhutGC_Q/s1600/green+glades+017.JPG'
+response = requests.get(URL, stream=True)
+img = Image.open(response.raw).convert("RGB")
 
-def plot(x):
-    if type(x) == torch.Tensor:
-        x = x.cpu().detach().numpy()
+## Plot
 
-train_set = datasets.MNIST('./data', train=True, download=True)
-test_set = datasets.MNIST('./data', train=False, download=True)
+plt.imshow(img)
+plt.title("Original Image")
+plt.axis('off')
+plt.show()
 
-X = train_set.data.numpy()
-X_test = test_set.data.numpy()
-Y = train_set.targets.numpy()
-Y_test = test_set.targets.numpy()
+## Convert to numpy array and show shape
 
-X = X[:, None, :, :] / 255
-X_test = X_test[:, None, :, :] / 255
+img_array = np.array(img)
+print("Shape:", img_array.shape)
 
-plt.imshow(X[1000, :].reshape(28, 28))
+## Resize image to 224x224
 
-X = X.reshape(X.shape[0], 784)
-X_test = X_test.reshape(X_test.shape[0], 784)
+resized_image = cv2.resize(img_array, (275, 300))
 
-X = X.T
-X = GPU_data(X)
-Y = GPU_data(Y)
-X_test = GPU_data(X_test)
-Y_test = GPU_data(Y_test)
+## Plot the reshaped image
 
-batch_size = 64
-x = X[:, 0:64]
-M = GPU(np.random.rand(10, 784))
-y = M @ x
+plt.imshow(resized_image)
+plt.title("Resized Image")
+plt.axis('off')
+plt.show()
 
-y = torch.argmax(y, 0)
-accuracy = torch.sum((y == Y[0:batch_size])) / batch_size
+## Convert to grayscale
 
-m_best = 0
-acc_best = 0
+grayscale_image = cv2.cvtColor(resized_image, cv2.COLOR_RGB2GRAY)
 
-y = torch.argmax(y, axis=0)
-acc = ((y == Y)).sum() / len(Y)
+## Show shape
 
-if acc > acc_best:
-    print(acc.item())
-    m_best = m
-    acc_best = acc
+print("Grayscale Shape:", grayscale_image.shape)
+
+## Plot grayscale image
+
+plt.imshow(grayscale_image, cmap='gray')
+plt.title("Grayscale Image")
+plt.axis('off')
+plt.show()
+
+## Randomly generate 10 n x n filters
+
+filter_size = 3
+filters = [np.random.randn(filter_size, filter_size) for _ in range(10)]
+
+fig, axs = plt.subplots(10, 2, figsize=(10, 30))
+for i, filt in enumerate(filters):
+    feature_map = cv2.filter2D(grayscale_image, -1, filt)
+
+    axs[i, 0].imshow(filt, cmap='gray')
+    axs[i, 0].set_title(f"Filter {i + 1}")
+    axs[i, 0].axis('off')
+
+    axs[i, 1].imshow(feature_map, cmap='gray')
+    axs[i, 1].set_title(f"Feature Map {i + 1}")
+    axs[i, 1].axis('off')
+
+plt.tight_layout()
+plt.show()
